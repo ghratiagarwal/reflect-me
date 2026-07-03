@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ReflectMe - The Shatter Room</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: url('bg.png') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Times New Roman', serif;
+            color: #c5a059;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: -1;
+        }
+
+        .controls { 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center; 
+            z-index: 100; 
+            position: absolute;
+        }
+
+        h1 { font-weight: 200; letter-spacing: 6px; margin-bottom: 40px; }
+
+        input {
+            background: transparent; border: none; border-bottom: 1px solid #c5a059;
+            color: #fff; padding: 15px; font-size: 20px; width: 350px;
+            text-align: center; outline: none; margin-bottom: 30px;
+            font-family: inherit;
+        }
+
+        button.setup-btn {
+            background: #c5a059; color: #000; border: none; padding: 14px 50px;
+            cursor: pointer; font-weight: bold; letter-spacing: 2px;
+            font-family: inherit; transition: 0.3s;
+        }
+        button.setup-btn:hover { background: #fff; }
+
+        #mirror-container {
+            position: relative;
+            display: none; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            perspective: 1200px;
+        }
+
+        /* Restored Vertical Rectangle Dimensions */
+        #mirror-frame {
+            width: 420px;
+            height: 580px;
+            padding: 20px;
+            background: linear-gradient(145deg, #4a3b1d, #c5a059, #2a2110);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.9);
+            border-radius: 4px;
+            cursor: crosshair;
+            z-index: 10;
+            transition: opacity 2.5s ease, transform 2.5s ease, filter 2s ease;
+        }
+
+        #mirror-surface {
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #000;
+        }
+
+        canvas { position: absolute; top: 0; left: 0; }
+
+        #etched-thought {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 26px;
+            text-align: center;
+            width: 85%;
+            color: rgba(220, 220, 220, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        #final-message {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            font-size: 32px;
+            text-align: center;
+            color: #fff;
+            letter-spacing: 8px;
+            opacity: 0;
+            z-index: 5;
+            width: 100%;
+        }
+
+        .pulse { animation: breathe 4s ease-in-out infinite; }
+
+        #journal-btn {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            opacity: 0;
+            background: transparent;
+            border: 1px solid #c5a059;
+            color: #c5a059;
+            padding: 15px 45px;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            font-family: inherit;
+            z-index: 200;
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        .shake { animation: shake 0.1s ease-in-out; }
+        @keyframes shake {
+            0% { transform: translate(0,0); }
+            50% { transform: translate(4px,4px); }
+            100% { transform: translate(0,0); }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="shatterSound" src="shatter.mp3" preload="auto"></audio>
+
+    <div class="controls" id="setup">
+        <h1>Get The Negativity Out</h1>
+        <input type="text" id="userInput" placeholder="WHAT WEIGHS ON YOU?" maxlength="30">
+        <button class="setup-btn" onclick="initMirror()">SHATTER</button>
+    </div>
+
+    <div id="mirror-container">
+        <div id="mirror-frame">
+            <div id="mirror-surface">
+                <div id="etched-thought"></div>
+                <canvas id="mirrorCanvas"></canvas>
+            </div>
+        </div>
+        <div id="final-message">The Thought Is Gone.<br><br>Breathe.</div>
+        <button id="journal-btn" onclick="location.reload()">Get back to Journal</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mirrorCanvas');
+        const ctx = canvas.getContext('2d');
+        const frame = document.getElementById('mirror-frame');
+        const thought = document.getElementById('etched-thought');
+        const finalMsg = document.getElementById('final-message');
+        const journalBtn = document.getElementById('journal-btn');
+        const sfx = document.getElementById('shatterSound');
+        
+        let clicks = 0;
+        const maxClicks = 30;
+
+        function initMirror() {
+            const val = document.getElementById('userInput').value;
+            if(!val) return;
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('mirror-container').style.display = 'flex';
+            thought.innerText = val;
+            canvas.width = 420;
+            canvas.height = 580;
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0,0, canvas.width, canvas.height);
+        }
+
+        frame.addEventListener('mousedown', (e) => {
+            if (clicks >= maxClicks) return;
+            clicks++;
+
+            // Play Audio
+            sfx.currentTime = 0;
+            sfx.play().catch(e => console.log("Audio play blocked"));
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            frame.classList.remove('shake');
+            void frame.offsetWidth; 
+            frame.classList.add('shake');
+
+            drawAdvancedShatter(x, y);
+            thought.style.opacity = 1 - (clicks / maxClicks);
+            if(clicks === maxClicks) handleDestruction();
+        });
+
+        function drawAdvancedShatter(x, y) {
+            // 1. Impact Hole
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 2. Realistic Jagged Radial Cracks
+            const branches = 10 + Math.floor(Math.random() * 5);
+            for(let i=0; i < branches; i++) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 + Math.random() * 0.4})`;
+                ctx.lineWidth = 0.5 + Math.random();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                
+                let angle = (i / branches) * Math.PI * 2 + (Math.random() * 0.2);
+                let length = 50 + Math.random() * 300;
+                
+                // Jagged line movement
+                let curX = x;
+                let curY = y;
+                for(let step=0; step<3; step++) {
+                    curX += Math.cos(angle) * (length/3) + (Math.random()-0.5)*15;
+                    curY += Math.sin(angle) * (length/3) + (Math.random()-0.5)*15;
+                    ctx.lineTo(curX, curY);
+                }
+                ctx.stroke();
+            }
+
+            // 3. Concentric Webbing
+            for (let j = 1; j < 4; j++) {
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+                let radius = j * 30 + (Math.random() * 10);
+                for (let k = 0; k < 12; k++) {
+                    let a = (k / 12) * Math.PI * 2;
+                    let rx = x + Math.cos(a) * radius + (Math.random() * 10);
+                    let ry = y + Math.sin(a) * radius + (Math.random() * 10);
+                    if (k === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+
+        function handleDestruction() {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            frame.style.opacity = "0";
+            frame.style.transform = "scale(0.85) translateY(200px) rotateX(25deg)";
+            frame.style.filter = "blur(12px)";
+            
+            setTimeout(() => {
+                frame.style.display = "none";
+                finalMsg.style.display = "block";
+                journalBtn.style.display = "block";
+                setTimeout(() => {
+                    finalMsg.style.transition = "opacity 3s ease";
+                    finalMsg.style.opacity = "1";
+                    finalMsg.classList.add('pulse');
+                    journalBtn.style.transition = "opacity 2s ease 1s";
+                    journalBtn.style.opacity = "1";
+                }, 100);
+            }, 1200);
+        }
+    </script>
+</body>
+</html>

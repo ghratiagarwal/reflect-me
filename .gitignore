@@ -1,0 +1,15 @@
+# Environment file
+.env
+
+# Vendor (if using composer later)
+vendor/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# XAMPP / local cache (optional)
+*.tmp
